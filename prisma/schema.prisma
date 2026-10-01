@@ -1,0 +1,380 @@
+// Cospel data model. Multi-tenant: a Workspace owns every business object.
+// The canonical pass design is stored as JSON (`PassProject`, validated by
+// src/lib/pass/schema.ts), so the editor and the database never drift.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Plan {
+  free
+  pro
+  business
+}
+
+enum MemberRole {
+  owner
+  admin
+  editor
+  viewer
+}
+
+enum ClientStatus {
+  lead
+  active
+  waiting
+  completed
+  archived
+}
+
+enum PassStatus {
+  draft
+  live
+  archived
+}
+
+enum TemplateScope {
+  personal
+  client
+  public
+  system
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  changes_requested
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  /// Opaque id from the auth provider (Auth.js, Better Auth, Clerk). Auth stays pluggable.
+  authId    String?  @unique
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships      WorkspaceMember[]
+  passVersions     PassVersion[]
+  approvalComments ApprovalComment[]
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(free)
+  /// White-label settings: company name, logo, favicon, accent, email sender, custom domain.
+  branding  Json     @default("{}")
+  customDomain String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      WorkspaceMember[]
+  clients      Client[]
+  brandKits    BrandKit[]
+  passes       Pass[]
+  templates    PassTemplate[]
+  assets       PassAsset[]
+  certificates CertificateConfig[]
+  apiKeys      ApiKey[]
+}
+
+model WorkspaceMember {
+  workspaceId String
+  userId      String
+  role        MemberRole @default(editor)
+  createdAt   DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+}
+
+model Client {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  companyName   String
+  contactPerson String?
+  email         String?
+  phone         String?
+  website       String?
+  notes         String?
+  logoAssetId   String?
+  status        ClientStatus @default(lead)
+  tags          String[]
+  /// Optional client portal: /portal/[slug]
+  portalSlug    String?      @unique
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brandKits BrandKit[]
+  passes    Pass[]
+  templates PassTemplate[]
+
+  @@index([workspaceId, status])
+}
+
+model BrandKit {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  clientId        String?
+  businessName    String
+  logoAssetId     String?
+  iconAssetId     String?
+  primaryColor    String
+  secondaryColor  String?
+  foregroundColor String
+  labelColor      String
+  legalText       String?
+  website         String?
+  supportEmail    String?
+  phone           String?
+  /// [{ name, latitude, longitude, relevantText }]
+  locations       Json     @default("[]")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client    Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  passes    Pass[]
+
+  @@index([workspaceId])
+}
+
+model CertificateConfig {
+  id                 String    @id @default(cuid())
+  workspaceId        String
+  label              String
+  passTypeIdentifier String
+  teamIdentifier     String
+  /// PEM certificate (public).
+  signerCertPem      String
+  /// AES-256-GCM ciphertext of the PEM private key (+ passphrase). Never sent to the browser.
+  signerKeyEncrypted Bytes
+  wwdrCertPem        String
+  expiresAt          DateTime
+  isDefault          Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  passes    Pass[]
+
+  @@unique([workspaceId, passTypeIdentifier])
+}
+
+model Pass {
+  id            String     @id @default(cuid())
+  workspaceId   String
+  clientId      String?
+  brandKitId    String?
+  certificateId String?
+  name          String
+  style         String
+  status        PassStatus @default(draft)
+  /// Canonical PassProject JSON (current working copy).
+  design        Json
+  /// Template variables used for personalization, e.g. { "customer.name": "Ada" }.
+  variables     Json       @default("{}")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client       Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  brandKit     BrandKit?          @relation(fields: [brandKitId], references: [id], onDelete: SetNull)
+  certificate  CertificateConfig? @relation(fields: [certificateId], references: [id], onDelete: SetNull)
+  versions     PassVersion[]
+  publications PassPublication[]
+  assets       PassAsset[]
+  approvals    ApprovalRequest[]
+
+  @@index([workspaceId, status])
+  @@index([clientId])
+}
+
+model PassVersion {
+  id        String   @id @default(cuid())
+  passId    String
+  number    Int
+  design    Json
+  note      String?
+  authorId  String?
+  createdAt DateTime @default(now())
+
+  pass   Pass  @relation(fields: [passId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([passId, number])
+}
+
+model PassTemplate {
+  id           String        @id @default(cuid())
+  workspaceId  String?
+  clientId     String?
+  scope        TemplateScope
+  slug         String?       @unique
+  name         String
+  category     String
+  businessType String?
+  tags         String[]
+  description  String?
+  design       Json
+  previewUrl   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client    Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([scope, category])
+}
+
+model PassAsset {
+  id          String   @id @default(cuid())
+  workspaceId String
+  passId      String?
+  kind        String
+  /// Sanitized original filename (display only; storage keys are random).
+  filename    String
+  mime        String
+  width       Int
+  height      Int
+  bytes       Int
+  storageKey  String   @unique
+  sha256      String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pass      Pass?     @relation(fields: [passId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+/// A signed, distributable instance of a pass (one serial number).
+model PassPublication {
+  id                  String    @id @default(cuid())
+  passId              String
+  versionNumber       Int
+  /// Random, unguessable id used in /p/[publicId].
+  publicId            String    @unique
+  serialNumber        String    @unique
+  /// Hash of the Wallet web service token; the token itself is shown only inside the signed pass.
+  authTokenHash       String
+  passTypeIdentifier  String
+  pkpassStorageKey    String?
+  /// Personalization values for this instance (bulk/CSV issuance).
+  variables           Json      @default("{}")
+  revokedAt           DateTime?
+  lastUpdatedAt       DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+
+  pass          Pass                 @relation(fields: [passId], references: [id], onDelete: Cascade)
+  views         PassView[]
+  downloads     PassDownload[]
+  registrations DeviceRegistration[]
+
+  @@index([passId])
+}
+
+/// Apple Wallet web service: devices registered for update pushes.
+model DeviceRegistration {
+  id                      String   @id @default(cuid())
+  publicationId           String
+  deviceLibraryIdentifier String
+  pushToken               String
+  createdAt               DateTime @default(now())
+
+  publication PassPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@unique([publicationId, deviceLibraryIdentifier])
+  @@index([deviceLibraryIdentifier])
+}
+
+/// Privacy-conscious analytics: no IPs, no fingerprints.
+model PassView {
+  id            String   @id @default(cuid())
+  publicationId String
+  referrer      String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  deviceClass   String?
+  createdAt     DateTime @default(now())
+
+  publication PassPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@index([publicationId, createdAt])
+}
+
+/// A .pkpass file request. Not proof the pass was added to Wallet.
+model PassDownload {
+  id            String   @id @default(cuid())
+  publicationId String
+  referrer      String?
+  utmCampaign   String?
+  deviceClass   String?
+  createdAt     DateTime @default(now())
+
+  publication PassPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@index([publicationId, createdAt])
+}
+
+model ApprovalRequest {
+  id            String         @id @default(cuid())
+  passId        String
+  versionNumber Int
+  /// SHA-256 of the long random token in /review/[token].
+  tokenHash     String         @unique
+  status        ApprovalStatus @default(pending)
+  note          String?
+  expiresAt     DateTime?
+  decidedAt     DateTime?
+  createdAt     DateTime       @default(now())
+
+  pass     Pass              @relation(fields: [passId], references: [id], onDelete: Cascade)
+  comments ApprovalComment[]
+
+  @@index([passId])
+}
+
+model ApprovalComment {
+  id         String   @id @default(cuid())
+  approvalId String
+  /// Null for comments left by the (anonymous) client reviewer.
+  authorId   String?
+  authorName String?
+  body       String
+  createdAt  DateTime @default(now())
+
+  approval ApprovalRequest @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  author   User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  /// First characters shown in the UI, e.g. "tk_live_ab12".
+  prefix      String
+  keyHash     String    @unique
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
