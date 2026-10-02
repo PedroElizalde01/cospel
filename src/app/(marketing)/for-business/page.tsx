@@ -25,7 +25,7 @@ export default function ForBusinessPage() {
   return (
     <>
       <PageHeader eyebrow="For business" title="Put your brand in your customers' Wallet.">
-        Passes sit on the lock screen, update in place and never get lost in an inbox. Build them yourself, or let us do it.
+        Passes for iPhone and Android sit on the lock screen, update in place and never get lost in an inbox. Build them yourself, or let us do it.
       </PageHeader>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="flex flex-wrap gap-3">

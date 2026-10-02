@@ -29,12 +29,21 @@ export function PreviewToolbar() {
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5" role="toolbar" aria-label="Preview options">
       <Segmented
+        label="Platform"
+        value={pv.platform}
+        onChange={(platform) => setPreview({ platform, ...(platform === "google" && pv.device === "watch" ? { device: "iphone" as const } : {}) })}
+        options={[
+          { value: "apple", label: "Apple Wallet" },
+          { value: "google", label: "Google Wallet" },
+        ]}
+      />
+      <Segmented
         label="Device"
         value={pv.device}
         onChange={(device) => setPreview({ device })}
         options={[
-          { value: "iphone", label: <><Smartphone /> <span className="hidden sm:inline">iPhone</span></>, title: "iPhone" },
-          { value: "watch", label: <><Watch /> <span className="hidden sm:inline">Watch</span></>, title: "Apple Watch" },
+          { value: "iphone", label: <><Smartphone /> <span className="hidden sm:inline">{pv.platform === "google" ? "Phone" : "iPhone"}</span></>, title: "Phone" },
+          ...(pv.platform === "apple" ? [{ value: "watch" as const, label: <><Watch /> <span className="hidden sm:inline">Watch</span></>, title: "Apple Watch" }] : []),
           { value: "context", label: <><WalletIcon /> <span className="hidden sm:inline">In Wallet</span></>, title: "In a simulated Wallet screen" },
         ]}
       />
@@ -56,7 +65,7 @@ export function PreviewToolbar() {
           { value: "fit", label: <><Maximize /> Fit</>, title: "Fit to canvas (F)" },
         ]}
       />
-      <Segmented
+      {pv.platform === "apple" && <Segmented
         label="Wallet version"
         value={pv.wallet}
         onChange={(wallet) => setPreview({ wallet })}
@@ -64,7 +73,7 @@ export function PreviewToolbar() {
           { value: "latest", label: "Latest", title: "Latest Wallet" },
           { value: "legacy", label: "Legacy", title: "Older Wallet versions" },
         ]}
-      />
+      />}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -89,7 +98,7 @@ export function PreviewCanvas({ className }: { className?: string }) {
   const selectedId = useBuilder((s) => s.selectedFieldId);
   const select = useBuilder((s) => s.select);
   const [ref, box] = useContainerSize<HTMLDivElement>();
-  const natural = previewSize(p, pv.device, pv.side);
+  const natural = previewSize(p, pv.device, pv.side, pv.platform);
   const fit = Math.min((box.width - 48) / natural.width, (box.height - 48) / natural.height, pv.device === "context" ? 1.2 : 1.6);
   const scale = pv.zoom === "actual" ? 1 : Math.max(0.3, fit || 1);
   const dark = pv.surround === "dark";
@@ -109,7 +118,7 @@ export function PreviewCanvas({ className }: { className?: string }) {
       <div className="flex min-h-full min-w-full items-center justify-center p-6">
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
-            key={`${p.style}-${pv.device}-${pv.side}-${pv.wallet}`}
+            key={`${pv.platform}-${p.style}-${pv.device}-${pv.side}-${pv.wallet}`}
             initial={{ opacity: 0, scale: 0.97, y: 6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98 }}
@@ -120,6 +129,7 @@ export function PreviewCanvas({ className }: { className?: string }) {
               device={pv.device}
               side={pv.side}
               wallet={pv.wallet}
+              platform={pv.platform}
               surround={pv.surround}
               scale={scale}
               interaction={{ selectedId, onSelect: select, sandbox: !accuracy }}
@@ -128,11 +138,11 @@ export function PreviewCanvas({ className }: { className?: string }) {
         </AnimatePresence>
       </div>
       <div className={cn("pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 text-[11px]", dark ? "text-neutral-500" : "text-neutral-500")}>
-        <span>{STYLE_SPECS[p.style].name}</span>
+        <span>{pv.platform === "google" ? "Google Wallet · generic layout" : STYLE_SPECS[p.style].name}</span>
         <span aria-hidden>·</span>
         <span className="tabular-nums">{Math.round(scale * 100)}%</span>
         {!accuracy && <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-600">Sandbox</span>}
-        {p.style === "posterGeneric" && pv.wallet === "latest" && <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-sky-700 dark:text-sky-400">iOS 27 layout, approximate</span>}
+        {pv.platform === "apple" && p.style === "posterGeneric" && pv.wallet === "latest" && <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-sky-700 dark:text-sky-400">iOS 27 layout, approximate</span>}
       </div>
     </div>
   );

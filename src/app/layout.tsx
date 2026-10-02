@@ -9,7 +9,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: { default: `${SITE.name} — Create beautiful Apple Wallet passes`, template: `%s · ${SITE.name}` },
+  title: { default: `${SITE.name} — Create beautiful wallet passes`, template: `%s · ${SITE.name}` },
   description: SITE.description,
   openGraph: { title: SITE.name, description: SITE.description, type: "website" },
 };

@@ -7,6 +7,7 @@ import { hiddenFieldIds, posterFallback, visibleFields } from "@/lib/pass/styles
 import { resolveProject } from "@/lib/pass/variables";
 import { cn } from "@/lib/utils";
 import { BarcodeImage } from "./barcode-image";
+import { AndroidContext, G_W, GooglePassDetails, GooglePassFace, googleCardHeight } from "./google-pass";
 import { PassBackLegacy, PassDetailsSheet } from "./pass-details";
 import { PassFace } from "./pass-face";
 import { AssetImg, InteractionContext, PASS_FONT, PASS_H, PASS_W, POSTER_H, type PreviewInteraction } from "./pass-parts";
@@ -14,12 +15,15 @@ import { AssetImg, InteractionContext, PASS_FONT, PASS_H, PASS_W, POSTER_H, type
 export type PreviewDevice = "iphone" | "watch" | "context";
 export type PreviewSide = "front" | "details";
 export type WalletVersion = "latest" | "legacy";
+export type WalletPlatform = "apple" | "google";
 
 export interface WalletPassPreviewProps {
   project: PassProject;
   device?: PreviewDevice;
   side?: PreviewSide;
   wallet?: WalletVersion;
+  /** Same design rendered as Apple Wallet or Google Wallet shows it. */
+  platform?: WalletPlatform;
   /** Surrounding device UI theme. Never changes the pass's own colors. */
   surround?: "light" | "dark";
   scale?: number;
@@ -28,7 +32,11 @@ export interface WalletPassPreviewProps {
 }
 
 /** Natural (unscaled) size of what the preview renders, for fit-to-container math. */
-export function previewSize(p: PassProject, device: PreviewDevice = "iphone", side: PreviewSide = "front") {
+export function previewSize(p: PassProject, device: PreviewDevice = "iphone", side: PreviewSide = "front", platform: WalletPlatform = "apple") {
+  if (platform === "google") {
+    if (device === "context") return { width: 372, height: 760 };
+    return side === "details" ? { width: G_W, height: 560 } : { width: G_W, height: googleCardHeight(p) };
+  }
   if (device === "watch") return { width: 232, height: 280 };
   if (device === "context") return { width: 372, height: 760 };
   if (side === "details") return { width: PASS_W, height: PASS_H + 60 };
@@ -101,7 +109,7 @@ function WalletContext({ p, dark, children }: { p: PassProject; dark: boolean; c
 }
 
 /**
- * High-fidelity Apple Wallet pass simulation. Pure function of the PassProject:
+ * High-fidelity Apple Wallet / Google Wallet pass simulation. Pure function of the PassProject:
  * the same data drives pass.json generation, so preview and real pass stay aligned.
  */
 export function WalletPassPreview({
@@ -109,23 +117,26 @@ export function WalletPassPreview({
   device = "iphone",
   side = "front",
   wallet = "latest",
+  platform = "apple",
   surround = "light",
   scale = 1,
   interaction,
   className,
 }: WalletPassPreviewProps) {
-  // Legacy Wallet doesn't know posterGeneric: show the generic fallback it would render.
   // Sample values fill `{{variables}}`; legacy Wallet doesn't know posterGeneric and shows its generic fallback.
   const p = useMemo(() => {
     const resolved = resolveProject(project);
     return wallet === "legacy" && resolved.style === "posterGeneric" ? posterFallback(resolved) : resolved;
   }, [project, wallet]);
   const hidden = useMemo(() => hiddenFieldIds(p), [p]);
-  const size = previewSize(p, device, side);
+  const size = previewSize(p, device, side, platform);
   const dark = surround === "dark";
 
   let content: React.ReactNode;
-  if (device === "watch") content = <WatchPreview p={p} />;
+  if (platform === "google") {
+    const card = side === "details" ? <GooglePassDetails p={p} dark={dark} /> : <div className="drop-shadow-[0_10px_24px_rgba(0,0,0,0.16)]"><GooglePassFace p={p} /></div>;
+    content = device === "context" ? <AndroidContext dark={dark}>{card}</AndroidContext> : card;
+  } else if (device === "watch") content = <WatchPreview p={p} />;
   else {
     const card =
       side === "details" ? (

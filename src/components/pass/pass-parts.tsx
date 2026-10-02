@@ -42,7 +42,7 @@ function resolveAlign(f: PassField, fallback: Align): Align {
 }
 
 /** A selectable field wrapper; outlines on hover/selection when the preview is interactive. */
-function Selectable({ field, children, className }: { field: PassField; children: ReactNode; className?: string }) {
+export function Selectable({ field, children, className }: { field: PassField; children: ReactNode; className?: string }) {
   const { selectedId, onSelect, hidden, sandbox } = useContext(InteractionContext);
   const isHidden = hidden?.has(field.id);
   if (isHidden && !sandbox) return null;

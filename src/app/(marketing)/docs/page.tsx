@@ -14,6 +14,7 @@ const SECTIONS = [
   ["barcodes", "Barcodes"],
   ["publishing", "Publishing"],
   ["certificates", "Apple Wallet certificates"],
+  ["google-wallet", "Google Wallet (Android)"],
   ["client-workflows", "Client workflows"],
   ["dynamic-passes", "Dynamic passes"],
   ["api", "API"],
@@ -76,6 +77,17 @@ export default function DocsPage() {
               <li>Convert to PEM: <code>openssl x509 -inform der -in pass.cer -out pass.pem</code>.</li>
               <li>Configure the server with the Pass Type ID, your Team ID and the file paths (see the README). Private keys never reach the browser and are encrypted at rest when stored in the database.</li>
             </ul>
+          </section>
+          <section>
+            <h2 id="google-wallet">Google Wallet (Android)</h2>
+            <p>Every design also renders as a Google Wallet pass. Switch the preview to <strong>Google Wallet</strong> in the editor to see it. Google uses its own layout, so the same content looks different:</p>
+            <ul>
+              <li>The logo is shown inside a circle. Use a square logo with some margin.</li>
+              <li>The card shows a title, one large header (your primary field), up to 6 more fields in rows of two, the barcode, and a hero image at the bottom (your strip or artwork).</li>
+              <li>Text is white or black automatically, based on the background color. The label color only applies to Apple Wallet.</li>
+              <li>Fields that don&apos;t fit on the card appear in pass details.</li>
+            </ul>
+            <p>Issuing real Google Wallet passes needs a Google Wallet issuer account (Google Pay &amp; Wallet Console) and a Google Cloud service account. New accounts start in demo mode until Google approves publishing.</p>
           </section>
           <section>
             <h2 id="client-workflows">Client workflows</h2>

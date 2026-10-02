@@ -19,7 +19,7 @@ export function PreviewOverlay({ open, onClose }: { open: boolean; onClose: () =
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
   if (!p) return null;
-  const size = previewSize(p, pv.device, pv.side);
+  const size = previewSize(p, pv.device, pv.side, pv.platform);
   const scale = typeof window === "undefined" ? 1 : Math.min((window.innerHeight - 160) / size.height, (window.innerWidth - 48) / size.width, 1.8);
   return (
     <AnimatePresence>
@@ -36,7 +36,7 @@ export function PreviewOverlay({ open, onClose }: { open: boolean; onClose: () =
         >
           <Button variant="ghost" size="icon" className="absolute top-3 right-3" aria-label="Close preview" onClick={onClose}><X /></Button>
           <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} transition={{ type: "spring", stiffness: 300, damping: 26 }} onClick={(e) => e.stopPropagation()}>
-            <WalletPassPreview project={p} device={pv.device} side={pv.side} wallet={pv.wallet} surround={pv.surround} scale={scale} />
+            <WalletPassPreview project={p} device={pv.device} side={pv.side} wallet={pv.wallet} platform={pv.platform} surround={pv.surround} scale={scale} />
           </motion.div>
           <div onClick={(e) => e.stopPropagation()}><PreviewToolbar /></div>
         </motion.div>

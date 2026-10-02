@@ -129,6 +129,16 @@ export function validateProject(raw: PassProject, ctx: ValidationContext = {}): 
     add("warning", "artwork", "Poster passes are built around artwork. Add an artwork image.", { panel: "design", control: "image-artwork" });
   }
 
+  // Google Wallet renders the same design with its own layout.
+  const logo = imgs.logo ?? imgs.icon;
+  if (logo?.width && logo.height && Math.abs(logo.width / logo.height - 1) > 0.25) {
+    add("suggestion", "google-logo", "Google Wallet shows the logo inside a circle. A square logo with some margin works on both platforms.", { panel: "design", control: "image-logo" });
+  }
+  const gFront = [...p.fields.header, ...p.fields.primary.slice(p.style === "boardingPass" ? 2 : 1), ...p.fields.secondary, ...p.fields.auxiliary, ...p.fields.footer];
+  if (gFront.length > 6) {
+    add("suggestion", "google-rows", "Google Wallet shows up to 6 fields on the card. The rest appear in pass details on Android.", { panel: "content" });
+  }
+
   // Compatibility
   if (spec.minIOS && spec.minIOS > minIOS) {
     add("suggestion", "style-compat", `${spec.name} needs iOS ${spec.minIOS}. Older devices will show the Generic fallback.`, { panel: "settings", control: "compatibility" });

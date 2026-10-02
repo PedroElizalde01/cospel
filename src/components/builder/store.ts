@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { field } from "@/lib/pass/factory";
 import type { FieldGroup, PassField, PassProject } from "@/lib/pass/schema";
 import type { PanelId } from "@/lib/pass/validate";
-import type { PreviewDevice, PreviewSide, WalletVersion } from "@/components/pass/wallet-pass-preview";
+import type { PreviewDevice, PreviewSide, WalletPlatform, WalletVersion } from "@/components/pass/wallet-pass-preview";
 
 const HISTORY_LIMIT = 100;
 /** Keystrokes on the same control within this window collapse into one undo step. */
@@ -14,6 +14,7 @@ const COALESCE_MS = 800;
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
 export interface PreviewSettings {
+  platform: WalletPlatform;
   device: PreviewDevice;
   side: PreviewSide;
   wallet: WalletVersion;
@@ -76,7 +77,7 @@ export const useBuilder = create<BuilderState>()((set, get) => ({
   save: { state: "idle", at: null },
   selectedFieldId: null,
   panel: "content",
-  preview: { device: "iphone", side: "front", wallet: "latest", zoom: "fit", surround: "light" },
+  preview: { platform: "apple", device: "iphone", side: "front", wallet: "latest", zoom: "fit", surround: "light" },
   accuracy: true,
   mobileTab: "edit",
 

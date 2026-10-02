@@ -23,7 +23,7 @@ const STYLE_SAMPLE: Record<(typeof PASS_STYLES)[number], string> = {
 const STEPS = [
   { icon: MousePointerClick, title: "Pick a starting point", text: "Loyalty, membership, ticket, coupon. Choose what you're making. We pick the right Wallet layout." },
   { icon: Layers, title: "Design with a live preview", text: "Edit text, colors, images and the barcode. The Wallet preview updates as you type." },
-  { icon: Wallet, title: "Publish to Apple Wallet", text: "Generate a signed pass, share a link or QR code, and customers add it in one tap." },
+  { icon: Wallet, title: "Publish to both wallets", text: "Share a link or QR code. iPhone users add it to Apple Wallet, Android users to Google Wallet, in one tap." },
 ];
 
 const USE_CASES = [
@@ -36,8 +36,9 @@ const USE_CASES = [
 ];
 
 const FAQ = [
-  { q: "Do I need an iPhone or a Mac to design a pass?", a: "No. Cospel runs in any modern browser on any computer, including Linux and Windows. You only need an iPhone to add the finished pass to Apple Wallet." },
-  { q: "Is it free?", a: "Designing, previewing, saving locally and exporting are free with no account. Creating a signed pass requires an Apple Developer Pass Type ID certificate configured on the server." },
+  { q: "Do I need an iPhone or a Mac to design a pass?", a: "No. Cospel runs in any modern browser on any computer, including Linux and Windows. Your customers add the finished pass on their iPhone or Android phone." },
+  { q: "Does it work on Android?", a: "Yes. Every design has a Google Wallet version for Android, generated from the same content. Google uses its own card layout, so the editor shows both previews side by side." },
+  { q: "Is it free?", a: "Designing, previewing, saving locally and exporting are free with no account. Issuing real Apple Wallet passes requires an Apple Developer certificate; Google Wallet requires a Google Wallet issuer account." },
   { q: "Where are my designs stored?", a: "In your browser (IndexedDB). Designs and images stay on your device until you generate or share them." },
   { q: "Can I put any layout I want on a pass?", a: "Apple Wallet uses fixed templates. You control content, field order, colors, images and the barcode. Wallet controls the final layout. Cospel shows exactly that, instead of pretending otherwise." },
   { q: "Does the barcode connect to my point-of-sale system?", a: "The code contains the data you choose, such as a member ID. Your business system must know how to interpret or redeem it." },
@@ -45,7 +46,11 @@ const FAQ = [
 ];
 
 export default function HomePage() {
-  const hero = ["event-ticket", "gym-membership", "coffee-loyalty"].map((s) => getTemplate(s)!.build());
+  const hero = [
+    { project: getTemplate("coffee-loyalty")!.build(), platform: "google" as const },
+    { project: getTemplate("gym-membership")!.build(), platform: "apple" as const },
+    { project: getTemplate("coffee-loyalty")!.build(), platform: "apple" as const },
+  ];
   const featured = TEMPLATES.slice(0, 6).map(({ build, ...meta }) => ({ meta, project: build() }));
   const sample = toPassJson(getTemplate("coffee-loyalty")!.build());
   const store = sample.storeCard as Record<string, unknown>;
@@ -62,11 +67,11 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-14 pb-10 sm:px-6 md:grid-cols-[1.05fr_1fr] md:pt-24">
           <div>
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground">
-              <Laptop className="size-3.5" /> Works in your browser. No app, no Mac.
+              <Laptop className="size-3.5" /> Apple Wallet and Google Wallet. No app, no Mac.
             </p>
-            <h1 className="text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">Create beautiful Apple Wallet passes.</h1>
+            <h1 className="text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">Create beautiful wallet passes.</h1>
             <p className="mt-5 max-w-lg text-lg text-pretty text-muted-foreground">
-              Design, preview and publish loyalty cards, memberships, event tickets and more, directly from your browser.
+              Design, preview and publish loyalty cards, memberships, event tickets and more for iPhone and Android, directly from your browser.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="h-11 px-5 text-base">
@@ -80,7 +85,7 @@ export default function HomePage() {
               <li className="flex items-center gap-2"><Sparkles className="size-4" /> Live Wallet preview</li>
               <li className="flex items-center gap-2"><ShieldCheck className="size-4" /> Designs stay local</li>
               <li className="flex items-center gap-2"><Building2 className="size-4" /> Branded for business</li>
-              <li className="flex items-center gap-2"><Smartphone className="size-4" /> Adds to Apple Wallet</li>
+              <li className="flex items-center gap-2"><Smartphone className="size-4" /> iPhone and Android</li>
             </ul>
           </div>
           <HeroPasses passes={hero} />
@@ -91,7 +96,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6" aria-labelledby="try">
         <div className="mb-8 max-w-xl">
           <h2 id="try" className="text-3xl font-semibold tracking-[-0.03em]">Try it right here.</h2>
-          <p className="mt-2 text-muted-foreground">Type a name, pick a color. That&apos;s the editor&apos;s real preview engine.</p>
+          <p className="mt-2 text-muted-foreground">Type a name, pick a color, switch between Apple Wallet and Google Wallet. That&apos;s the editor&apos;s real preview engine.</p>
         </div>
         <InteractiveDemo />
       </section>
@@ -100,7 +105,7 @@ export default function HomePage() {
       <section className="border-y border-border/60 bg-muted/30" aria-labelledby="types">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <h2 id="types" className="text-3xl font-semibold tracking-[-0.03em]">Every Wallet pass type.</h2>
-          <p className="mt-2 max-w-xl text-muted-foreground">Each one follows Apple&apos;s real layout rules, including the new iOS 27 Poster style with automatic fallback.</p>
+          <p className="mt-2 max-w-xl text-muted-foreground">Designed on Apple&apos;s real layout rules, including the new iOS 27 Poster style. Every design also renders as a Google Wallet pass for Android.</p>
           <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3">
             {PASS_STYLES.map((s) => (
               <div key={s} className="overflow-hidden rounded-2xl border border-border/70 bg-background">

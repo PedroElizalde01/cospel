@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Segmented } from "@/components/builder/ui";
-import { WalletPassPreview } from "@/components/pass/wallet-pass-preview";
+import { WalletPassPreview, type WalletPlatform } from "@/components/pass/wallet-pass-preview";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isDark } from "@/lib/pass/color";
@@ -18,6 +18,7 @@ export function InteractiveDemo() {
   const [business, setBusiness] = useState("North Coffee");
   const [member, setMember] = useState("Maya Chen");
   const [bg, setBg] = useState(COLORS[0]);
+  const [platform, setPlatform] = useState<WalletPlatform>("apple");
 
   const starters = useMemo(() => ({ loyalty: starterProject("loyalty"), membership: starterProject("membership"), event: starterProject("event") }), []);
   const project = useMemo(() => {
@@ -32,7 +33,10 @@ export function InteractiveDemo() {
   return (
     <div className="grid items-center gap-10 rounded-3xl border border-border/70 bg-card p-6 sm:p-10 md:grid-cols-[1fr_auto]">
       <div className="max-w-sm space-y-5">
-        <Segmented label="Pass type" value={kind} onChange={setKind} options={Object.entries(KINDS).map(([value, label]) => ({ value: value as keyof typeof KINDS, label }))} />
+        <div className="flex flex-wrap gap-2">
+          <Segmented label="Platform" value={platform} onChange={setPlatform} options={[{ value: "apple", label: "Apple Wallet" }, { value: "google", label: "Google Wallet" }]} />
+          <Segmented label="Pass type" value={kind} onChange={setKind} options={Object.entries(KINDS).map(([value, label]) => ({ value: value as keyof typeof KINDS, label }))} />
+        </div>
         <div className="space-y-1.5">
           <Label htmlFor="demo-business">Business name</Label>
           <Input id="demo-business" value={business} onChange={(e) => setBusiness(e.target.value)} maxLength={28} />
@@ -58,10 +62,10 @@ export function InteractiveDemo() {
             ))}
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">This is the same preview the editor uses. What you see is what Wallet renders.</p>
+        <p className="text-sm text-muted-foreground">One design, both wallets. This is the same preview the editor uses.</p>
       </div>
       <div className="flex justify-center">
-        <WalletPassPreview project={project} scale={0.9} />
+        <WalletPassPreview project={project} platform={platform} scale={platform === "google" ? 0.75 : 0.9} />
       </div>
     </div>
   );

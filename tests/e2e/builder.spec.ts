@@ -116,3 +116,12 @@ test("template variables preview with editable sample data", async ({ page }) =>
   await page.getByRole("tab", { name: "JSON" }).click();
   await expect(page.locator("pre")).toContainText('"value": "Lucía Gómez"');
 });
+
+test("previews the same design as a Google Wallet pass", async ({ page }) => {
+  await startFrom(page, "Loyalty card");
+  await page.locator("#organizationName").fill("Android Bakery");
+  await page.getByRole("radio", { name: "Google Wallet" }).click();
+  await expect(preview(page).getByText("Android Bakery")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Watch" })).toHaveCount(0);
+  await expect(page.getByText("Google Wallet · generic layout")).toBeVisible();
+});

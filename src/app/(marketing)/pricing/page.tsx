@@ -12,14 +12,14 @@ const PLANS = [
     price: "Free",
     note: "No account",
     cta: { label: "Create a pass", href: "/create" },
-    features: ["Unlimited designs", "Realistic Wallet preview", "All pass types and templates", "Save in your browser", "Export and import projects", "Live pass.json inspector"],
+    features: ["Unlimited designs", "Apple Wallet and Google Wallet previews", "All pass types and templates", "Save in your browser", "Export and import projects", "Live pass.json inspector"],
   },
   {
     name: "Pro",
     price: "Coming soon",
     note: "For freelancers and small teams",
     cta: { label: "Get notified", href: "/for-business#contact" },
-    features: ["Signed passes for Apple Wallet", "Hosted pass pages and QR codes", "Brand kits", "Client review links", "Basic analytics"],
+    features: ["Real passes for Apple Wallet and Google Wallet", "Hosted pass pages and QR codes", "Brand kits", "Client review links", "Basic analytics"],
   },
   {
     name: "Business",
