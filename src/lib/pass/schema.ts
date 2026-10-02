@@ -143,6 +143,8 @@ export const PassProjectSchema = z.object({
   }),
   barcode: BarcodeSchema,
   images: z.partialRecord(ImageSlotSchema, AssetRefSchema).default({}),
+  /** Example values for `{{variables}}`, used by the preview. Real passes use customer data. */
+  sampleData: z.record(z.string(), z.string()).default({}),
   relevance: RelevanceSchema.default({ relevantDate: "", expirationDate: "", locations: [], maxDistance: null }),
   metadata: z
     .object({

@@ -104,3 +104,15 @@ test("mobile editor has Edit and Preview tabs @mobile", async ({ page }) => {
   await expect(preview(page).getByText("Your Business")).toBeVisible(); // logo text unchanged
   await expect(page.locator("#organizationName")).toBeHidden();
 });
+
+test("template variables preview with editable sample data", async ({ page }) => {
+  await page.goto("/create");
+  await page.evaluate(() => localStorage.setItem("cospel:onboarded", "1"));
+  await page.goto("/create?template=coffee-loyalty");
+  await page.waitForURL(/\/create\/[0-9a-f-]{36}$/);
+  await page.getByRole("button", { name: "Data" }).click();
+  await page.locator('[id="var-customer.name"]').fill("Lucía Gómez");
+  await expect(preview(page).getByText("Lucía Gómez")).toBeVisible();
+  await page.getByRole("tab", { name: "JSON" }).click();
+  await expect(page.locator("pre")).toContainText('"value": "Lucía Gómez"');
+});

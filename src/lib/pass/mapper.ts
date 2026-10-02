@@ -2,6 +2,7 @@ import { BARCODE_SPECS } from "./barcode";
 import { toPassColor } from "./color";
 import { minIOSFor, type ImageSlot, type PassField, type PassProject } from "./schema";
 import { STYLE_SPECS, effectiveImages, imageSpec, posterFallback, visibleFields } from "./styles";
+import { resolveProject, type VariableData } from "./variables";
 
 /** Values only the server knows when it signs a pass. Preview uses placeholders. */
 export interface PassIdentity {
@@ -57,7 +58,8 @@ function fieldDict(groups: Partial<Record<string, PassField[]>>, back: PassField
  * (same `visibleFields` the preview uses), so the generated pass never
  * contains layout Wallet would reject or silently drop.
  */
-export function toPassJson(p: PassProject, id: PassIdentity = PREVIEW_IDENTITY): PassJson {
+export function toPassJson(project: PassProject, id: PassIdentity = PREVIEW_IDENTITY, data: VariableData = project.sampleData): PassJson {
+  const p = resolveProject(project, data);
   const b = p.branding;
   const v = visibleFields(p);
   const json: PassJson = {

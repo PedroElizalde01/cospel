@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { BARCODE_SPECS } from "@/lib/pass/barcode";
 import type { PassProject } from "@/lib/pass/schema";
 import { hiddenFieldIds, posterFallback, visibleFields } from "@/lib/pass/styles";
+import { resolveProject } from "@/lib/pass/variables";
 import { cn } from "@/lib/utils";
 import { BarcodeImage } from "./barcode-image";
 import { PassBackLegacy, PassDetailsSheet } from "./pass-details";
@@ -114,7 +115,11 @@ export function WalletPassPreview({
   className,
 }: WalletPassPreviewProps) {
   // Legacy Wallet doesn't know posterGeneric: show the generic fallback it would render.
-  const p = useMemo(() => (wallet === "legacy" && project.style === "posterGeneric" ? posterFallback(project) : project), [project, wallet]);
+  // Sample values fill `{{variables}}`; legacy Wallet doesn't know posterGeneric and shows its generic fallback.
+  const p = useMemo(() => {
+    const resolved = resolveProject(project);
+    return wallet === "legacy" && resolved.style === "posterGeneric" ? posterFallback(resolved) : resolved;
+  }, [project, wallet]);
   const hidden = useMemo(() => hiddenFieldIds(p), [p]);
   const size = previewSize(p, device, side);
   const dark = surround === "dark";

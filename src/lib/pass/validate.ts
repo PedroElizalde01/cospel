@@ -2,9 +2,10 @@ import { BARCODE_SPECS } from "./barcode";
 import { contrastRatio, isHex } from "./color";
 import { FIELD_GROUPS, minIOSFor, type FieldGroup, type ImageSlot, type PassProject } from "./schema";
 import { STYLE_SPECS, SQUARE_BARCODES, combinedRowMax, imageSpec } from "./styles";
+import { extractVariables, resolveProject, type VariableData } from "./variables";
 
 export type Severity = "error" | "warning" | "suggestion";
-export type PanelId = "content" | "design" | "barcode" | "details" | "relevance" | "settings";
+export type PanelId = "content" | "design" | "barcode" | "details" | "relevance" | "data" | "settings";
 
 export interface Issue {
   id: string;
@@ -17,6 +18,8 @@ export interface Issue {
 export interface ValidationContext {
   /** "generate" turns preview-time warnings that block signing into errors. */
   mode?: "preview" | "generate";
+  /** Values for `{{variables}}`. Defaults to the project's sample data. */
+  data?: VariableData;
   signing?: { configured: boolean; expiresAt?: string | null };
   now?: Date;
 }
@@ -26,11 +29,20 @@ const TRUNCATE_AT: Partial<Record<FieldGroup, number>> = { header: 12, primary: 
 
 const GROUP_PANEL = (g: FieldGroup): PanelId => (g === "back" ? "details" : "content");
 
-export function validateProject(p: PassProject, ctx: ValidationContext = {}): Issue[] {
+export function validateProject(raw: PassProject, ctx: ValidationContext = {}): Issue[] {
   const issues: Issue[] = [];
   const add = (severity: Severity, id: string, message: string, target: Issue["target"]) =>
     issues.push({ id, severity, message, target });
   const generating = ctx.mode === "generate";
+  const data = ctx.data ?? raw.sampleData;
+
+  // Variables: checked on the raw design; every other rule sees resolved values.
+  for (const name of extractVariables(raw).keys()) {
+    if (!(name in data) || data[name] === "") {
+      add(generating ? "error" : "suggestion", `var-${name}`, generating ? `Variable {{${name}}} has no value.` : `Add a sample value for {{${name}}} to preview it.`, { panel: "data", control: `var-${name}` });
+    }
+  }
+  const p = resolveProject(raw, data);
   const spec = STYLE_SPECS[p.style];
   const b = p.branding;
   const minIOS = minIOSFor(p.compatibility);

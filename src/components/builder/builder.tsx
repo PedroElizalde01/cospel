@@ -1,6 +1,6 @@
 "use client";
 
-import { Barcode, CalendarClock, Layers, Palette, ScrollText, Settings2 } from "lucide-react";
+import { Barcode, Braces, CalendarClock, Layers, Palette, ScrollText, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -14,6 +14,7 @@ import { GenerateDialog } from "./generate-dialog";
 import { Onboarding } from "./onboarding";
 import { BarcodePanel } from "./panels/barcode-panel";
 import { ContentPanel } from "./panels/content-panel";
+import { DataPanel } from "./panels/data-panel";
 import { DesignPanel } from "./panels/design-panel";
 import { DetailsPanel } from "./panels/details-panel";
 import { RelevancePanel } from "./panels/relevance-panel";
@@ -30,6 +31,7 @@ const PANELS: { id: PanelId; label: string; icon: typeof Layers; Component: () =
   { id: "barcode", label: "Barcode", icon: Barcode, Component: BarcodePanel },
   { id: "details", label: "Details", icon: ScrollText, Component: DetailsPanel },
   { id: "relevance", label: "Relevance", icon: CalendarClock, Component: RelevancePanel },
+  { id: "data", label: "Data", icon: Braces, Component: DataPanel },
   { id: "settings", label: "Settings", icon: Settings2, Component: SettingsPanel },
 ];
 
