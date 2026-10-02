@@ -4,8 +4,8 @@ Design, preview and publish Apple Wallet passes from the browser.
 
 Two surfaces share one pass engine:
 
-- **Public playground** (`/create`): no account, designs stay in the browser (IndexedDB).
-- **Studio** (`/studio`): client, brand-kit and publishing workflow for agencies (Phase 3).
+- **Public playground** (`/create`): no account, designs stay in the browser (IndexedDB)
+- **Studio** (`/studio`): client, brand-kit and publishing workflow for agencies (Phase 3)
 
 Everything builds and runs on Linux. No macOS is needed at any step.
 
