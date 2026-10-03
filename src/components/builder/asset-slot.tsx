@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ImageSlot } from "@/lib/pass/schema";
 import { imageSpec } from "@/lib/pass/styles";
-import { getAsset, putAsset, useAssetUrl } from "@/lib/storage/drafts";
+import { getAsset, useAssetUrl } from "@/lib/storage/drafts";
+import { usePersistence } from "./persistence";
 import { cn } from "@/lib/utils";
 import { AssetCropper } from "./asset-cropper";
 import { useBuilder } from "./store";
@@ -32,6 +33,7 @@ export function AssetSlot({ slot, disabledReason }: { slot: ImageSlot; disabledR
   const style = useBuilder((s) => s.project!.style);
   const ref = useBuilder((s) => s.project!.images[slot]);
   const update = useBuilder((s) => s.update);
+  const persistence = usePersistence();
   const url = useAssetUrl(ref);
   const spec = imageSpec(slot, style);
   const input = useRef<HTMLInputElement>(null);
@@ -42,8 +44,7 @@ export function AssetSlot({ slot, disabledReason }: { slot: ImageSlot; disabledR
   const accept = async (file: File) => {
     try {
       const dims = await readImage(file);
-      const id = await putAsset(file, dims.width, dims.height);
-      setOriginalId(id);
+      setOriginalId(await persistence.storeOriginal?.(file, dims.width, dims.height));
       setCropSrc(URL.createObjectURL(file));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -131,10 +132,14 @@ export function AssetSlot({ slot, disabledReason }: { slot: ImageSlot; disabledR
         slot={slot}
         style={style}
         onSave={async ({ blob, width, height }) => {
-          const id = await putAsset(blob, width, height);
-          update((d) => {
-            d.images[slot] = { kind: "local", id, originalId, width, height };
-          });
+          try {
+            const ref = await persistence.storeImage(blob, width, height, originalId);
+            update((d) => {
+              d.images[slot] = ref;
+            });
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Upload failed");
+          }
         }}
       />
     </div>

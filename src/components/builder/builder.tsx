@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { validateProject, type PanelId } from "@/lib/pass/validate";
-import { duplicateDraft, getDraft, saveDraft } from "@/lib/storage/drafts";
 import { cn } from "@/lib/utils";
 import { GenerateDialog } from "./generate-dialog";
 import { Onboarding } from "./onboarding";
@@ -19,6 +18,7 @@ import { DesignPanel } from "./panels/design-panel";
 import { DetailsPanel } from "./panels/details-panel";
 import { RelevancePanel } from "./panels/relevance-panel";
 import { SettingsPanel } from "./panels/settings-panel";
+import { accountPersistence, localPersistence, PersistenceContext, type Persistence } from "./persistence";
 import { PreviewCanvas, PreviewToolbar } from "./preview-canvas";
 import { PreviewOverlay } from "./preview-overlay";
 import { RightPanel } from "./right-panel";
@@ -38,7 +38,7 @@ const PANELS: { id: PanelId; label: string; icon: typeof Layers; Component: () =
 const isEditable = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.getAttribute("role") === "textbox");
 
-function useAutosave() {
+function useAutosave(persistence: Persistence) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flush = useCallback(async () => {
     if (timer.current) clearTimeout(timer.current);
@@ -46,13 +46,13 @@ function useAutosave() {
     const { project, setSave } = useBuilder.getState();
     if (!project) return;
     try {
-      await saveDraft(project);
+      await persistence.save(project);
       setSave("saved");
     } catch {
       setSave("error");
-      toast.error("Couldn't save to this browser. Export your project to keep a copy.");
+      toast.error(persistence.mode === "local" ? "Couldn't save to this browser. Export your project to keep a copy." : "Couldn't save. Check your connection; changes are kept while this tab is open.");
     }
-  }, []);
+  }, [persistence]);
 
   useEffect(() => {
     const unsub = useBuilder.subscribe((s, prev) => {
@@ -108,7 +108,8 @@ function ActivePanel() {
   return <Component />;
 }
 
-export function Builder({ draftId, signingAvailable }: { draftId: string; signingAvailable: boolean }) {
+export function Builder({ draftId, signingAvailable, mode = "local" }: { draftId: string; signingAvailable: boolean; mode?: "local" | "account" }) {
+  const persistence = mode === "account" ? accountPersistence : localPersistence;
   const router = useRouter();
   const project = useBuilder((s) => (s.project?.id === draftId ? s.project : null));
   const mobileTab = useBuilder((s) => s.mobileTab);
@@ -116,14 +117,14 @@ export function Builder({ draftId, signingAvailable }: { draftId: string; signin
   const [previewOpen, setPreviewOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const flush = useAutosave();
+  const flush = useAutosave(persistence);
 
   useEffect(() => {
     let alive = true;
-    getDraft(draftId).then((row) => {
+    persistence.load(draftId).then((project) => {
       if (!alive) return;
-      if (row) {
-        useBuilder.getState().load(row.project);
+      if (project) {
+        useBuilder.getState().load(project);
         useBuilder.getState().setPreview({ surround: document.documentElement.classList.contains("dark") ? "dark" : "light" });
       }
       else setMissing(true);
@@ -131,18 +132,18 @@ export function Builder({ draftId, signingAvailable }: { draftId: string; signin
     return () => {
       alive = false;
     };
-  }, [draftId]);
+  }, [draftId, persistence]);
 
   const issues = useMemo(() => (project ? validateProject(project, { signing: { configured: signingAvailable } }) : []), [project, signingAvailable]);
 
   const duplicate = useCallback(async () => {
     await flush();
-    const id = await duplicateDraft(draftId);
+    const id = await persistence.duplicate(draftId);
     if (id) {
       toast.success("Duplicated");
-      router.push(`/create/${id}`);
+      router.push(persistence.editorHref(id));
     }
-  }, [draftId, flush, router]);
+  }, [draftId, flush, router, persistence]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -175,9 +176,9 @@ export function Builder({ draftId, signingAvailable }: { draftId: string; signin
   if (missing)
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
-        <h1 className="text-lg font-semibold">This draft isn&apos;t in this browser</h1>
-        <p className="max-w-sm text-sm text-muted-foreground">Drafts are saved locally. It may have been deleted or created on another device.</p>
-        <Button asChild><Link href="/create">Go to my passes</Link></Button>
+        <h1 className="text-lg font-semibold">{mode === "local" ? "This draft isn't in this browser" : "Pass not found"}</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">{mode === "local" ? "Drafts are saved locally. It may have been deleted or created on another device." : "It may have been deleted, or it belongs to another business."}</p>
+        <Button asChild><Link href={persistence.backHref}>Go to my passes</Link></Button>
       </div>
     );
   if (!project)
@@ -188,8 +189,9 @@ export function Builder({ draftId, signingAvailable }: { draftId: string; signin
     );
 
   return (
+    <PersistenceContext.Provider value={persistence}>
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <TopBar onPreview={() => setPreviewOpen(true)} onGenerate={() => setGenerateOpen(true)} onInspector={() => setInspectorOpen(true)} onDuplicate={duplicate} />
+      <TopBar onPreview={() => setPreviewOpen(true)} onGenerate={() => setGenerateOpen(true)} onInspector={() => setInspectorOpen(true)} onDuplicate={duplicate} onFlush={flush} />
 
       {/* Mobile: Edit / Preview tabs */}
       <div className="flex border-b border-border/60 md:hidden" role="tablist" aria-label="Editor view">
@@ -237,5 +239,6 @@ export function Builder({ draftId, signingAvailable }: { draftId: string; signin
       <GenerateDialog open={generateOpen} onOpenChange={setGenerateOpen} signingAvailable={signingAvailable} />
       <Onboarding />
     </div>
+    </PersistenceContext.Provider>
   );
 }

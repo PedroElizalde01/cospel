@@ -115,7 +115,7 @@ export function validateProject(raw: PassProject, ctx: ValidationContext = {}): 
     }
     const ref = imgs[slot]!;
     const s = imageSpec(slot, p.style);
-    if (ref.kind === "local" && s.fit === "exact" && (ref.width < s.width * 2 || ref.height < s.height * 2)) {
+    if (ref.width && ref.height && s.fit === "exact" && (ref.width < s.width * 2 || ref.height < s.height * 2)) {
       add("suggestion", `img-small-${slot}`, `${s.label} is ${ref.width}×${ref.height}px. Use at least ${s.width * 2}×${s.height * 2}px to stay sharp.`, { panel: "design", control: `image-${slot}` });
     }
   }

@@ -15,7 +15,7 @@ Everything builds and runs on Linux. No macOS is needed at any step.
 | --- | --- | --- |
 | 1 | Landing, playground, builder, previews, fields, colors, images, barcodes, local drafts, templates, JSON export/import | Done |
 | 2 | Server-side signing, `.pkpass` generation, hosted `/p/[publicId]`, Add to Wallet flow | Interfaces only (`src/server/signing.ts`) |
-| 3 | Studio, auth, PostgreSQL, clients, brand kits, versions, review links, analytics, marketing kit | Data model + migration only |
+| 3 | Studio, auth, PostgreSQL, clients, brand kits, versions, review links, analytics, marketing kit | Accounts, businesses, saved passes and image uploads done; the rest pending |
 | 4 | Dynamic updates, device registrations, CSV personalization, API, white label | Data model only |
 
 ## Local development
@@ -40,14 +40,28 @@ pnpm test:e2e         # Playwright: builder and marketing flows (starts its own 
 
 First Playwright run: `pnpm exec playwright install chromium` (add `--with-deps` on a fresh Linux box).
 
-### Database (Phase 3)
+### Accounts and database (Studio)
+
+The playground needs nothing. Studio (`/studio`) needs Postgres and an auth secret.
+
+- Database: Neon, connected through the Vercel integration (`DATABASE_URL` pooled, `DATABASE_URL_UNPOOLED` direct).
+- Accounts: Better Auth (email + password), stored in the same database.
+- Images uploaded in Studio are stored in Postgres (`PassAsset.data`) for now.
 
 ```bash
-cp .env.example .env  # set DATABASE_URL
-docker run -d --name cospel-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
-pnpm db:validate
-pnpm db:migrate       # applies prisma/migrations
+vercel env pull .env.local        # DATABASE_URL, DATABASE_URL_UNPOOLED, BETTER_AUTH_SECRET
+pnpm db:migrate                   # apply prisma/migrations (uses the direct URL)
+pnpm dev
 ```
+
+Local Postgres instead of Neon:
+
+```bash
+docker run -d --name cospel-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
+# set DATABASE_URL and DATABASE_URL_UNPOOLED to postgresql://postgres:postgres@localhost:5432/postgres
+```
+
+New migrations are applied manually with `pnpm db:migrate` before deploying code that needs them.
 
 ### Apple Wallet signing (Phase 2)
 

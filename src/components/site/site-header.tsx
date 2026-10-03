@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
@@ -19,6 +20,7 @@ const NAV = [
 
 export function SiteHeader() {
   const path = usePathname();
+  const { data: session } = authClient.useSession();
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6">
@@ -41,6 +43,9 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-1.5">
           <ThemeToggle />
+          <Button asChild size="sm" variant="ghost" className="hidden h-8 px-3 sm:inline-flex">
+            <Link href={session ? "/studio" : "/login"}>{session ? "Studio" : "Log in"}</Link>
+          </Button>
           <Button asChild size="sm" className="hidden h-8 px-3 sm:inline-flex">
             <Link href="/create">Create a pass</Link>
           </Button>
@@ -58,6 +63,7 @@ export function SiteHeader() {
                     {n.label}
                   </Link>
                 ))}
+                <Link href={session ? "/studio" : "/login"} className="rounded-md px-3 py-2 text-sm hover:bg-muted">{session ? "Studio" : "Log in"}</Link>
                 <Button asChild className="mt-2">
                   <Link href="/create">Create a pass</Link>
                 </Button>

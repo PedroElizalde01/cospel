@@ -137,6 +137,16 @@ export async function exportProject(project: PassProject) {
   // Originals stay local: exports carry only the processed images.
   const clean = structuredClone(project);
   for (const ref of Object.values(clean.images)) if (ref?.kind === "local") delete ref.originalId;
+  // Account images need a session to load; embed them so the file works anywhere.
+  for (const [slot, ref] of Object.entries(clean.images) as [keyof typeof clean.images, AssetRef | undefined][]) {
+    if (ref?.kind !== "url" || !ref.url.startsWith("/api/assets/")) continue;
+    const res = await fetch(ref.url);
+    if (!res.ok) continue;
+    const blob = await res.blob();
+    const id = uid();
+    assets[id] = { mime: "image/png", width: ref.width ?? 1, height: ref.height ?? 1, dataUrl: await blobToDataUrl(blob) };
+    clean.images[slot] = { kind: "local", id, width: ref.width ?? 1, height: ref.height ?? 1 };
+  }
   const file = buildProjectFile(clean, assets);
   const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
   const a = document.createElement("a");

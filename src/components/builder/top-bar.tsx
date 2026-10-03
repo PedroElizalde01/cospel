@@ -11,6 +11,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toPassJson } from "@/lib/pass/mapper";
 import { exportProject } from "@/lib/storage/drafts";
 import { cn } from "@/lib/utils";
+import { usePersistence } from "./persistence";
+import { SaveToAccount } from "./save-to-account";
 import { useBuilder } from "./store";
 
 const mod = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl+";
@@ -56,7 +58,8 @@ function IconAction({ label, shortcut, onClick, disabled, children }: { label: s
   );
 }
 
-export function TopBar({ onPreview, onGenerate, onInspector, onDuplicate }: { onPreview: () => void; onGenerate: () => void; onInspector: () => void; onDuplicate: () => void }) {
+export function TopBar({ onPreview, onGenerate, onInspector, onDuplicate, onFlush }: { onPreview: () => void; onGenerate: () => void; onInspector: () => void; onDuplicate: () => void; onFlush: () => Promise<void> }) {
+  const persistence = usePersistence();
   const name = useBuilder((s) => s.project!.name);
   const canUndo = useBuilder((s) => s.past.length > 0);
   const canRedo = useBuilder((s) => s.future.length > 0);
@@ -65,7 +68,7 @@ export function TopBar({ onPreview, onGenerate, onInspector, onDuplicate }: { on
   return (
     <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border/60 bg-background px-2">
       <Button variant="ghost" size="icon-sm" asChild aria-label="Back to my passes">
-        <Link href="/create"><ArrowLeft /></Link>
+        <Link href={persistence.backHref}><ArrowLeft /></Link>
       </Button>
       <input
         aria-label="Pass name"
@@ -100,6 +103,7 @@ export function TopBar({ onPreview, onGenerate, onInspector, onDuplicate }: { on
             <DropdownMenuItem disabled>Share link · needs publishing</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {persistence.mode === "local" && <span className="ml-1.5"><SaveToAccount onBeforeSave={onFlush} /></span>}
         <Button size="sm" className="ml-1.5 h-8 px-3" onClick={onGenerate} data-onboarding="generate">
           <Sparkles /> <span className="hidden sm:inline">Generate pass</span><span className="sm:hidden">Generate</span>
         </Button>
